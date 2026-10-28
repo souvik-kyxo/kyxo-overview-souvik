@@ -7,7 +7,18 @@ class TodoApp {
     this.emptyState = document.getElementById('emptyState');
 
     this.taskForm.addEventListener('submit', (e) => this.addTask(e));
+    this.tasksContainer.addEventListener('change', (e) => this.handleTaskChange(e));
     this.loadTasks();
+  }
+
+  handleTaskChange(e) {
+    if (e.target.classList.contains('status-select')) {
+      const taskId = e.target.closest('.task-item').dataset.taskId;
+      this.updateTask(taskId, { status: e.target.value });
+    } else if (e.target.classList.contains('task-checkbox')) {
+      const taskId = e.target.closest('.task-item').dataset.taskId;
+      this.updateTask(taskId, { done: e.target.checked });
+    }
   }
 
   async loadTasks() {
@@ -104,32 +115,33 @@ class TodoApp {
     }
 
     this.tasksContainer.innerHTML = this.tasks.map(task => `
-      <div class="task-item ${task.done ? 'done' : ''}">
+      <div class="task-item ${task.done ? 'done' : ''}" data-task-id="${task.id}">
         <input
           type="checkbox"
           class="task-checkbox"
           ${task.done ? 'checked' : ''}
-          onchange="app.updateTask('${task.id}', { done: ${!task.done} })"
         >
         <div class="task-content">
           <div class="task-title">${this.escapeHtml(task.title)}</div>
           <div class="task-meta">
-            <select
-              class="status-select"
-              value="${task.status}"
-              onchange="app.updateTask('${task.id}', { status: event.target.value })"
-            >
-              <option value="todo">To Do</option>
-              <option value="in-progress">In Progress</option>
-              <option value="done">Done</option>
+            <select class="status-select">
+              <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>To Do</option>
+              <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+              <option value="done" ${task.status === 'done' ? 'selected' : ''}>Done</option>
             </select>
           </div>
         </div>
         <div class="task-actions">
-          <button class="btn-delete" onclick="app.deleteTask('${task.id}')">Delete</button>
+          <button class="btn-delete" data-task-id="${task.id}">Delete</button>
         </div>
       </div>
     `).join('');
+
+    this.tasksContainer.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.deleteTask(btn.dataset.taskId);
+      });
+    });
   }
 
   escapeHtml(text) {
