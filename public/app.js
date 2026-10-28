@@ -117,7 +117,7 @@ class TodoApp {
             <select
               class="status-select"
               value="${task.status}"
-              onchange="app.updateTask('${task.id}', { status: this.value })"
+              onchange="app.updateTask('${task.id}', { status: event.target.value })"
             >
               <option value="todo">To Do</option>
               <option value="in-progress">In Progress</option>
