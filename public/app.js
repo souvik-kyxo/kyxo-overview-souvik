@@ -2,11 +2,14 @@ class TodoApp {
   constructor() {
     this.tasks = [];
     this.searchQuery = '';
+    this.selectedCategories = new Set();
     this.taskForm = document.getElementById('taskForm');
     this.taskInput = document.getElementById('taskInput');
     this.dueDateInput = document.getElementById('dueDateInput');
+    this.categoryInput = document.getElementById('categoryInput');
     this.searchInput = document.getElementById('searchInput');
     this.tasksContainer = document.getElementById('tasksContainer');
+    this.categoryFiltersContainer = document.getElementById('categoryFilters');
     this.emptyState = document.getElementById('emptyState');
 
     this.taskForm.addEventListener('submit', (e) => this.addTask(e));
@@ -29,6 +32,10 @@ class TodoApp {
     e.preventDefault();
     const title = this.taskInput.value.trim();
     const dueDate = this.dueDateInput.value || null;
+    const categoriesInput = this.categoryInput.value.trim();
+    const categories = categoriesInput
+      ? categoriesInput.split(',').map(cat => cat.trim().toLowerCase()).filter(cat => cat)
+      : [];
 
     if (!title) {
       this.taskInput.focus();
@@ -39,7 +46,7 @@ class TodoApp {
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, status: 'todo', done: false, dueDate })
+        body: JSON.stringify({ title, status: 'todo', done: false, dueDate, categories })
       });
 
       if (!response.ok) {
@@ -51,6 +58,7 @@ class TodoApp {
       this.tasks.push(newTask);
       this.taskInput.value = '';
       this.dueDateInput.value = '';
+      this.categoryInput.value = '';
       this.render();
     } catch (error) {
       console.error('Error adding task:', error);
@@ -108,13 +116,42 @@ class TodoApp {
     this.render();
   }
 
-  getFilteredTasks() {
-    if (!this.searchQuery.trim()) {
-      return this.tasks;
+  toggleCategory(category) {
+    if (this.selectedCategories.has(category)) {
+      this.selectedCategories.delete(category);
+    } else {
+      this.selectedCategories.add(category);
     }
-    return this.tasks.filter(task =>
-      task.title.toLowerCase().includes(this.searchQuery)
-    );
+    this.render();
+  }
+
+  getAllCategories() {
+    const categories = new Set();
+    this.tasks.forEach(task => {
+      if (task.categories && Array.isArray(task.categories)) {
+        task.categories.forEach(cat => categories.add(cat));
+      }
+    });
+    return Array.from(categories).sort();
+  }
+
+  getFilteredTasks() {
+    let filtered = this.tasks;
+
+    if (this.searchQuery.trim()) {
+      filtered = filtered.filter(task =>
+        task.title.toLowerCase().includes(this.searchQuery)
+      );
+    }
+
+    if (this.selectedCategories.size > 0) {
+      filtered = filtered.filter(task =>
+        task.categories && Array.isArray(task.categories) &&
+        Array.from(this.selectedCategories).some(cat => task.categories.includes(cat))
+      );
+    }
+
+    return filtered;
   }
 
   getDueDateStatus(dueDate) {
@@ -156,7 +193,42 @@ class TodoApp {
     return `Due ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })}`;
   }
 
+  renderCategoryFilters() {
+    const allCategories = this.getAllCategories();
+
+    if (allCategories.length === 0) {
+      this.categoryFiltersContainer.innerHTML = '';
+      return;
+    }
+
+    const categoryButtons = allCategories.map(category => {
+      const isSelected = this.selectedCategories.has(category);
+      return `
+        <button
+          class="category-filter-btn ${isSelected ? 'active' : ''}"
+          onclick="app.toggleCategory('${this.escapeHtml(category)}')"
+        >
+          ${this.escapeHtml(category)}
+        </button>
+      `;
+    }).join('');
+
+    this.categoryFiltersContainer.innerHTML = `
+      <div class="category-filter-header">Filter by category:</div>
+      <div class="category-filter-buttons">
+        ${categoryButtons}
+        ${this.selectedCategories.size > 0 ? '<button class="category-filter-btn clear-btn" onclick="app.clearCategoryFilters()">Clear</button>' : ''}
+      </div>
+    `;
+  }
+
+  clearCategoryFilters() {
+    this.selectedCategories.clear();
+    this.render();
+  }
+
   render() {
+    this.renderCategoryFilters();
     const filteredTasks = this.getFilteredTasks();
 
     if (this.tasks.length === 0) {
@@ -165,7 +237,7 @@ class TodoApp {
     }
 
     if (filteredTasks.length === 0) {
-      this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks match your search.</p>';
+      this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks match your filters.</p>';
       return;
     }
 
@@ -174,6 +246,10 @@ class TodoApp {
       const dueDateClass = dueDateStatus ? `due-date ${dueDateStatus}` : 'due-date';
       const dueDateDisplay = task.dueDate ? `<span class="${dueDateClass}">${this.formatDate(task.dueDate)}</span>` : '<span class="due-date-placeholder">Add due date</span>';
       const formattedDate = task.dueDate ? task.dueDate : '';
+
+      const categoriesHtml = task.categories && Array.isArray(task.categories) && task.categories.length > 0
+        ? `<div class="task-categories">${task.categories.map(cat => `<span class="category-tag">${this.escapeHtml(cat)}</span>`).join('')}</div>`
+        : '';
 
       return `
         <div class="task-item ${task.done ? 'done' : ''} ${task.dueDate && dueDateStatus === 'overdue' ? 'overdue' : ''}">
@@ -185,6 +261,7 @@ class TodoApp {
           >
           <div class="task-content">
             <div class="task-title">${this.escapeHtml(task.title)}</div>
+            ${categoriesHtml}
             <div class="task-meta">
               <select
                 class="status-select"
@@ -201,6 +278,14 @@ class TodoApp {
                 value="${formattedDate}"
                 onchange="app.updateTask('${task.id}', { dueDate: event.target.value || null })"
                 title="Click to set or edit due date"
+              >
+              <input
+                type="text"
+                class="task-category-input"
+                placeholder="Add categories (comma-separated)"
+                value="${task.categories && Array.isArray(task.categories) ? task.categories.join(', ') : ''}"
+                onchange="app.updateTask('${task.id}', { categories: event.target.value.split(',').map(c => c.trim().toLowerCase()).filter(c => c) })"
+                title="Click to add or edit categories"
               >
             </div>
           </div>
