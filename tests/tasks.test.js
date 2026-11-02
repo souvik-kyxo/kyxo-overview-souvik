@@ -96,4 +96,49 @@ describe('Task Model', () => {
       expect(task.createdAt).toBe('2025-01-01T00:00:00Z');
     });
   });
+
+  describe('Due dates feature', () => {
+    test('creates task with dueDate', () => {
+      const task = new Task('Buy groceries', 'todo', false, 'task-1', '2025-01-01T00:00:00Z', '2025-12-31');
+      expect(task.dueDate).toBe('2025-12-31');
+    });
+
+    test('toJSON includes dueDate when set', () => {
+      const task = new Task('Buy groceries', 'todo', false, 'task-1', '2025-01-01T00:00:00Z', '2025-12-31');
+      const json = task.toJSON();
+      expect(json.dueDate).toBe('2025-12-31');
+      expect(json).toHaveProperty('dueDate');
+    });
+
+    test('toJSON excludes dueDate when null', () => {
+      const task = new Task('Buy groceries', 'todo', false, 'task-1', '2025-01-01T00:00:00Z', null);
+      const json = task.toJSON();
+      expect(json).not.toHaveProperty('dueDate');
+    });
+
+    test('fromJSON handles dueDate correctly', () => {
+      const json = {
+        id: 'task-1',
+        title: 'Buy groceries',
+        status: 'todo',
+        done: false,
+        createdAt: '2025-01-01T00:00:00Z',
+        dueDate: '2025-12-31'
+      };
+      const task = Task.fromJSON(json);
+      expect(task.dueDate).toBe('2025-12-31');
+    });
+
+    test('fromJSON handles missing dueDate', () => {
+      const json = {
+        id: 'task-1',
+        title: 'Buy groceries',
+        status: 'todo',
+        done: false,
+        createdAt: '2025-01-01T00:00:00Z'
+      };
+      const task = Task.fromJSON(json);
+      expect(task.dueDate).toBeNull();
+    });
+  });
 });

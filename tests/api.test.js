@@ -241,4 +241,77 @@ describe('Tasks API', () => {
       expect(statusResponse.body.done).toBe(true); // Should still be done
     });
   });
+
+  describe('Due Dates Feature', () => {
+    test('creates a task with a due date', async () => {
+      const response = await request(app)
+        .post('/api/tasks')
+        .send({ title: 'Task with due date', status: 'todo', done: false, dueDate: '2025-12-31' });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('dueDate');
+      expect(response.body.dueDate).toBe('2025-12-31');
+    });
+
+    test('creates a task without a due date', async () => {
+      const response = await request(app)
+        .post('/api/tasks')
+        .send({ title: 'Task without due date', status: 'todo', done: false });
+
+      expect(response.status).toBe(201);
+      expect(response.body.dueDate).toBeUndefined();
+    });
+
+    test('updates a task with a due date', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .send({ title: 'Task to add due date', status: 'todo', done: false });
+
+      const taskId = createResponse.body.id;
+
+      const updateResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .send({ dueDate: '2025-06-30' });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.dueDate).toBe('2025-06-30');
+    });
+
+    test('clears a due date by setting it to null', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .send({ title: 'Task with due date', status: 'todo', done: false, dueDate: '2025-12-31' });
+
+      const taskId = createResponse.body.id;
+
+      const updateResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .send({ dueDate: null });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.dueDate).toBeUndefined();
+    });
+
+    test('persists due date across multiple operations', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .send({ title: 'Task with persistence', status: 'todo', done: false, dueDate: '2025-12-31' });
+
+      const taskId = createResponse.body.id;
+
+      // Change status but keep due date
+      await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .send({ status: 'in-progress' });
+
+      // Mark as done but keep due date
+      const finalResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .send({ done: true });
+
+      expect(finalResponse.body.dueDate).toBe('2025-12-31');
+      expect(finalResponse.body.status).toBe('in-progress');
+      expect(finalResponse.body.done).toBe(true);
+    });
+  });
 });

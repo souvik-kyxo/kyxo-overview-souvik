@@ -1,5 +1,5 @@
 class Task {
-  constructor(title, status = 'todo', done = false, id = null, createdAt = null) {
+  constructor(title, status = 'todo', done = false, id = null, createdAt = null, dueDate = null) {
     if (!title || title.trim() === '') {
       throw new Error('Task title cannot be empty');
     }
@@ -9,6 +9,7 @@ class Task {
     this.status = status; // 'todo', 'in-progress', 'done'
     this.done = done;
     this.createdAt = createdAt || new Date().toISOString();
+    this.dueDate = dueDate;
   }
 
   markAsDone() {
@@ -28,17 +29,21 @@ class Task {
   }
 
   toJSON() {
-    return {
+    const json = {
       id: this.id,
       title: this.title,
       status: this.status,
       done: this.done,
       createdAt: this.createdAt
     };
+    if (this.dueDate !== null) {
+      json.dueDate = this.dueDate;
+    }
+    return json;
   }
 
   static fromJSON(data) {
-    return new Task(data.title, data.status, data.done, data.id, data.createdAt);
+    return new Task(data.title, data.status, data.done, data.id, data.createdAt, data.dueDate);
   }
 }
 

@@ -4,6 +4,7 @@ class TodoApp {
     this.searchQuery = '';
     this.taskForm = document.getElementById('taskForm');
     this.taskInput = document.getElementById('taskInput');
+    this.dueDateInput = document.getElementById('dueDateInput');
     this.searchInput = document.getElementById('searchInput');
     this.tasksContainer = document.getElementById('tasksContainer');
     this.emptyState = document.getElementById('emptyState');
@@ -27,6 +28,7 @@ class TodoApp {
   async addTask(e) {
     e.preventDefault();
     const title = this.taskInput.value.trim();
+    const dueDate = this.dueDateInput.value || null;
 
     if (!title) {
       this.taskInput.focus();
@@ -37,7 +39,7 @@ class TodoApp {
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, status: 'todo', done: false })
+        body: JSON.stringify({ title, status: 'todo', done: false, dueDate })
       });
 
       if (!response.ok) {
@@ -48,6 +50,7 @@ class TodoApp {
       const newTask = await response.json();
       this.tasks.push(newTask);
       this.taskInput.value = '';
+      this.dueDateInput.value = '';
       this.render();
     } catch (error) {
       console.error('Error adding task:', error);
@@ -114,6 +117,45 @@ class TodoApp {
     );
   }
 
+  getDueDateStatus(dueDate) {
+    if (!dueDate) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+
+    const diffTime = due - today;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    if (diffDays < 0) return 'overdue';
+    if (diffDays === 0) return 'today';
+    if (diffDays <= 7) return 'upcoming';
+    return null;
+  }
+
+  formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const due = new Date(dateStr);
+    due.setHours(0, 0, 0, 0);
+
+    if (due.getTime() === today.getTime()) {
+      return 'Due today';
+    }
+    if (due.getTime() === tomorrow.getTime()) {
+      return 'Due tomorrow';
+    }
+
+    return `Due ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })}`;
+  }
+
   render() {
     const filteredTasks = this.getFilteredTasks();
 
@@ -127,33 +169,47 @@ class TodoApp {
       return;
     }
 
-    this.tasksContainer.innerHTML = filteredTasks.map(task => `
-      <div class="task-item ${task.done ? 'done' : ''}">
-        <input
-          type="checkbox"
-          class="task-checkbox"
-          ${task.done ? 'checked' : ''}
-          onchange="app.updateTask('${task.id}', { done: ${!task.done} })"
-        >
-        <div class="task-content">
-          <div class="task-title">${this.escapeHtml(task.title)}</div>
-          <div class="task-meta">
-            <select
-              class="status-select"
-              value="${task.status}"
-              onchange="app.updateTask('${task.id}', { status: event.target.value })"
-            >
-              <option value="todo">To Do</option>
-              <option value="in-progress">In Progress</option>
-              <option value="done">Done</option>
-            </select>
+    this.tasksContainer.innerHTML = filteredTasks.map(task => {
+      const dueDateStatus = this.getDueDateStatus(task.dueDate);
+      const dueDateClass = dueDateStatus ? `due-date ${dueDateStatus}` : 'due-date';
+      const dueDateDisplay = task.dueDate ? `<span class="${dueDateClass}">${this.formatDate(task.dueDate)}</span>` : '<span class="due-date-placeholder">Add due date</span>';
+      const formattedDate = task.dueDate ? task.dueDate : '';
+
+      return `
+        <div class="task-item ${task.done ? 'done' : ''} ${task.dueDate && dueDateStatus === 'overdue' ? 'overdue' : ''}">
+          <input
+            type="checkbox"
+            class="task-checkbox"
+            ${task.done ? 'checked' : ''}
+            onchange="app.updateTask('${task.id}', { done: ${!task.done} })"
+          >
+          <div class="task-content">
+            <div class="task-title">${this.escapeHtml(task.title)}</div>
+            <div class="task-meta">
+              <select
+                class="status-select"
+                value="${task.status}"
+                onchange="app.updateTask('${task.id}', { status: event.target.value })"
+              >
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+              <input
+                type="date"
+                class="task-due-date-input"
+                value="${formattedDate}"
+                onchange="app.updateTask('${task.id}', { dueDate: event.target.value || null })"
+                title="Click to set or edit due date"
+              >
+            </div>
+          </div>
+          <div class="task-actions">
+            <button class="btn-delete" onclick="app.deleteTask('${task.id}')">Delete</button>
           </div>
         </div>
-        <div class="task-actions">
-          <button class="btn-delete" onclick="app.deleteTask('${task.id}')">Delete</button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   escapeHtml(text) {
