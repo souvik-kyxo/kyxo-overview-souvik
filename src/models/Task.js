@@ -35,13 +35,11 @@ class Task {
       title: this.title,
       status: this.status,
       done: this.done,
-      createdAt: this.createdAt
+      createdAt: this.createdAt,
+      categories: this.categories
     };
     if (this.dueDate !== null) {
       json.dueDate = this.dueDate;
-    }
-    if (this.categories.length > 0) {
-      json.categories = this.categories;
     }
     return json;
   }

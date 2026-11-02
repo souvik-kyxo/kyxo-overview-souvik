@@ -1,6 +1,8 @@
 class TodoApp {
   constructor() {
     this.tasks = [];
+    this.categories = [];
+    this.categoryColorMap = {};
     this.searchQuery = '';
     this.selectedCategories = new Set();
     this.taskForm = document.getElementById('taskForm');
@@ -14,7 +16,129 @@ class TodoApp {
 
     this.taskForm.addEventListener('submit', (e) => this.addTask(e));
     this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+    this.categoryInput.addEventListener('input', (e) => this.handleCategoryInput(e));
+    this.loadCategories();
     this.loadTasks();
+  }
+
+  async loadCategories() {
+    try {
+      const response = await fetch('/api/tasks/categories/all');
+      if (!response.ok) throw new Error('Failed to load categories');
+      this.categories = await response.json();
+      this.buildCategoryColorMap();
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  }
+
+  buildCategoryColorMap() {
+    this.categoryColorMap = {};
+    this.categories.forEach(cat => {
+      this.categoryColorMap[cat.name] = cat.color;
+    });
+  }
+
+  toggleCategoryManager() {
+    const manager = document.getElementById('categoryManager');
+    manager.classList.toggle('hidden');
+    if (!manager.classList.contains('hidden')) {
+      this.renderCategoriesManager();
+    }
+  }
+
+  getTaskCountByCategory(categoryName) {
+    return this.tasks.filter(task =>
+      task.categories && Array.isArray(task.categories) &&
+      task.categories.includes(categoryName)
+    ).length;
+  }
+
+  renderCategoriesManager() {
+    const content = document.getElementById('categoriesListContent');
+
+    if (this.categories.length === 0) {
+      content.innerHTML = '<p style="color: #999; font-size: 14px;">No categories yet. Create one above!</p>';
+      return;
+    }
+
+    content.innerHTML = this.categories.map(cat => {
+      const taskCount = this.getTaskCountByCategory(cat.name);
+      return `
+        <div class="category-item">
+          <div class="category-item-info">
+            <div class="category-item-color" style="background-color: ${cat.color}"></div>
+            <span class="category-item-name">${this.escapeHtml(cat.name)}</span>
+            <span class="category-item-count">${taskCount} task${taskCount !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="category-item-actions">
+            <button class="btn-delete-category" onclick="app.deleteCategory('${this.escapeHtml(cat.name)}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async addNewCategory() {
+    const nameInput = document.getElementById('newCategoryName');
+    const colorInput = document.getElementById('newCategoryColor');
+    const name = nameInput.value.trim();
+    const color = colorInput.value;
+
+    if (!name) {
+      alert('Please enter a category name');
+      nameInput.focus();
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/tasks/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color, description: '' })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add category');
+      }
+
+      const newCategory = await response.json();
+      this.categories.push(newCategory);
+      this.buildCategoryColorMap();
+      nameInput.value = '';
+      colorInput.value = '#667eea';
+      this.renderCategoriesManager();
+      this.render();
+    } catch (error) {
+      console.error('Error adding category:', error);
+      alert(error.message);
+    }
+  }
+
+  async deleteCategory(categoryName) {
+    if (!confirm(`Delete category "${categoryName}"? Tasks with this category will not be deleted.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/tasks/categories/${categoryName}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete category');
+      }
+
+      this.categories = this.categories.filter(c => c.name !== categoryName);
+      this.buildCategoryColorMap();
+      this.renderCategoriesManager();
+      this.render();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      alert(error.message);
+    }
   }
 
   async loadTasks() {
@@ -26,6 +150,52 @@ class TodoApp {
     } catch (error) {
       console.error('Error loading tasks:', error);
     }
+  }
+
+  handleCategoryInput(e) {
+    const input = e.target.value;
+    const suggestions = this.getRecommendedCategories(input);
+    this.renderCategorySuggestions(suggestions);
+  }
+
+  getRecommendedCategories(input) {
+    if (!input.trim()) {
+      return this.categories.slice(0, 5);
+    }
+    const lastCategory = input.split(',').pop().trim().toLowerCase();
+    return this.categories.filter(cat =>
+      cat.displayName.toLowerCase().startsWith(lastCategory)
+    ).slice(0, 5);
+  }
+
+  renderCategorySuggestions(suggestions) {
+    const container = document.getElementById('categorySuggestions');
+    if (!container) return;
+
+    if (suggestions.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = suggestions.map(cat => `
+      <div class="category-suggestion" onclick="app.addSuggestionCategory('${this.escapeHtml(cat.displayName)}')">
+        <span class="suggestion-color" style="background-color: ${cat.color}"></span>
+        <span class="suggestion-name">${this.escapeHtml(cat.displayName)}</span>
+      </div>
+    `).join('');
+  }
+
+  addSuggestionCategory(categoryName) {
+    const current = this.categoryInput.value.trim();
+    const categories = current ? current.split(',').map(c => c.trim()) : [];
+
+    if (!categories.includes(categoryName)) {
+      categories.push(categoryName);
+      this.categoryInput.value = categories.join(', ');
+    }
+
+    const container = document.getElementById('categorySuggestions');
+    if (container) container.innerHTML = '';
   }
 
   async addTask(e) {
@@ -203,11 +373,15 @@ class TodoApp {
 
     const categoryButtons = allCategories.map(category => {
       const isSelected = this.selectedCategories.has(category);
+      const color = this.getCategoryColor(category);
       return `
         <button
           class="category-filter-btn ${isSelected ? 'active' : ''}"
+          style="${isSelected ? `background-color: ${color}; border-color: ${color};` : ''}"
           onclick="app.toggleCategory('${this.escapeHtml(category)}')"
+          title="Filter by ${this.escapeHtml(category)}"
         >
+          <span class="category-dot" style="background-color: ${color}"></span>
           ${this.escapeHtml(category)}
         </button>
       `;
@@ -217,9 +391,13 @@ class TodoApp {
       <div class="category-filter-header">Filter by category:</div>
       <div class="category-filter-buttons">
         ${categoryButtons}
-        ${this.selectedCategories.size > 0 ? '<button class="category-filter-btn clear-btn" onclick="app.clearCategoryFilters()">Clear</button>' : ''}
+        ${this.selectedCategories.size > 0 ? '<button class="category-filter-btn clear-btn" onclick="app.clearCategoryFilters()">✕ Clear</button>' : ''}
       </div>
     `;
+  }
+
+  getCategoryColor(categoryName) {
+    return this.categoryColorMap[categoryName.toLowerCase()] || '#667eea';
   }
 
   clearCategoryFilters() {
@@ -229,6 +407,10 @@ class TodoApp {
 
   render() {
     this.renderCategoryFilters();
+    const categoryManager = document.getElementById('categoryManager');
+    if (categoryManager && !categoryManager.classList.contains('hidden')) {
+      this.renderCategoriesManager();
+    }
     const filteredTasks = this.getFilteredTasks();
 
     if (this.tasks.length === 0) {
@@ -248,7 +430,10 @@ class TodoApp {
       const formattedDate = task.dueDate ? task.dueDate : '';
 
       const categoriesHtml = task.categories && Array.isArray(task.categories) && task.categories.length > 0
-        ? `<div class="task-categories">${task.categories.map(cat => `<span class="category-tag">${this.escapeHtml(cat)}</span>`).join('')}</div>`
+        ? `<div class="task-categories">${task.categories.map(cat => {
+          const color = this.getCategoryColor(cat);
+          return `<span class="category-tag" style="background: linear-gradient(135deg, ${color} 0%, ${this.adjustColor(color, -20)} 100%)">${this.escapeHtml(cat)}</span>`;
+        }).join('')}</div>`
         : '';
 
       return `
@@ -301,6 +486,18 @@ class TodoApp {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  adjustColor(color, percent) {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255))
+      .toString(16).slice(1);
   }
 }
 

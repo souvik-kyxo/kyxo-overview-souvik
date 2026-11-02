@@ -1,0 +1,74 @@
+[
+  {
+    "id": "1793631623714",
+    "name": "work",
+    "displayName": "Work",
+    "color": "#3b82f6",
+    "description": "Work-related tasks",
+    "createdAt": "2026-11-02T15:00:24.396Z"
+  },
+  {
+    "id": "1793631623720",
+    "name": "personal",
+    "displayName": "Personal",
+    "color": "#8b5cf6",
+    "description": "Personal tasks",
+    "createdAt": "2026-11-02T15:00:24.396Z"
+  },
+  {
+    "id": "1793631623720",
+    "name": "shopping",
+    "displayName": "Shopping",
+    "color": "#ec4899",
+    "description": "Shopping list items",
+    "createdAt": "2026-11-02T15:00:24.396Z"
+  },
+  {
+    "id": "1793631623720",
+    "name": "health",
+    "displayName": "Health",
+    "color": "#10b981",
+    "description": "Health and fitness",
+    "createdAt": "2026-11-02T15:00:24.396Z"
+  },
+  {
+    "id": "1793631623720",
+    "name": "urgent",
+    "displayName": "Urgent",
+    "color": "#ef4444",
+    "description": "Urgent tasks",
+    "createdAt": "2026-11-02T15:00:24.396Z"
+  },
+  {
+    "id": "1793631623720",
+    "name": "important",
+    "displayName": "Important",
+    "color": "#f59e0b",
+    "description": "Important tasks",
+    "createdAt": "2026-11-02T15:00:24.396Z"
+  },
+  {
+    "id": "1793631624415",
+    "name": "test category",
+    "displayName": "Test Category",
+    "color": "#ff5733",
+    "description": "A test category",
+    "createdAt": "2026-11-02T15:00:24.415Z"
+  },
+  {
+    "id": "1793631624421",
+    "name": "unique category",
+    "displayName": "Unique Category",
+    "color": "#ff5733",
+    "description": "",
+    "createdAt": "2026-11-02T15:00:24.421Z"
+  },
+  {
+    "id": "1793631624426",
+    "name": "invalid color",
+    "displayName": "Invalid Color",
+    "color": "#667eea",
+    "description": "",
+    "createdAt": "2026-11-02T15:00:24.426Z"
+  }
+]

@@ -27,26 +27,63 @@
               id="dueDateInput"
               class="due-date-input"
             >
-            <input
-              type="text"
-              id="categoryInput"
-              placeholder="Add category (comma-separated)"
-              class="category-input"
-            >
+            <div class="category-input-wrapper">
+              <input
+                type="text"
+                id="categoryInput"
+                placeholder="Add category (comma-separated)"
+                class="category-input"
+              >
+              <div id="categorySuggestions" class="category-suggestions"></div>
+            </div>
             <button type="submit" class="btn btn-primary">Add Task</button>
           </div>
         </form>
       </section>
 
       <section class="filter-section">
-        <input
-          type="text"
-          id="searchInput"
-          placeholder="Search tasks..."
-          class="search-input"
-        >
+        <div class="filter-header-row">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search tasks..."
+            class="search-input"
+          >
+          <button class="btn-manage-categories" onclick="app.toggleCategoryManager()" title="Manage categories">⚙️</button>
+        </div>
         <div id="categoryFilters" class="category-filters"></div>
       </section>
+
+      <div id="categoryManager" class="category-manager hidden">
+        <div class="category-manager-header">
+          <h3>Manage Categories</h3>
+          <button class="btn-close" onclick="app.toggleCategoryManager()">✕</button>
+        </div>
+        <div class="category-manager-content">
+          <div class="add-category-form">
+            <h4>Add New Category</h4>
+            <div class="add-category-inputs">
+              <input
+                type="text"
+                id="newCategoryName"
+                placeholder="Category name"
+                class="new-category-input"
+              >
+              <input
+                type="color"
+                id="newCategoryColor"
+                class="new-category-color"
+                value="#667eea"
+              >
+              <button class="btn btn-primary" onclick="app.addNewCategory()">Add</button>
+            </div>
+          </div>
+          <div class="categories-list">
+            <h4>Existing Categories</h4>
+            <div id="categoriesListContent" class="categories-list-content"></div>
+          </div>
+        </div>
+      </div>
 
       <section class="tasks-section">
         <div id="tasksContainer" class="tasks-list">
