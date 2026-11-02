@@ -1,12 +1,15 @@
 class TodoApp {
   constructor() {
     this.tasks = [];
+    this.searchQuery = '';
     this.taskForm = document.getElementById('taskForm');
     this.taskInput = document.getElementById('taskInput');
+    this.searchInput = document.getElementById('searchInput');
     this.tasksContainer = document.getElementById('tasksContainer');
     this.emptyState = document.getElementById('emptyState');
 
     this.taskForm.addEventListener('submit', (e) => this.addTask(e));
+    this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
     this.loadTasks();
   }
 
@@ -97,13 +100,34 @@ class TodoApp {
     }
   }
 
+  handleSearch(e) {
+    this.searchQuery = e.target.value.toLowerCase();
+    this.render();
+  }
+
+  getFilteredTasks() {
+    if (!this.searchQuery.trim()) {
+      return this.tasks;
+    }
+    return this.tasks.filter(task =>
+      task.title.toLowerCase().includes(this.searchQuery)
+    );
+  }
+
   render() {
+    const filteredTasks = this.getFilteredTasks();
+
     if (this.tasks.length === 0) {
       this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks yet. Add one to get started!</p>';
       return;
     }
 
-    this.tasksContainer.innerHTML = this.tasks.map(task => `
+    if (filteredTasks.length === 0) {
+      this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks match your search.</p>';
+      return;
+    }
+
+    this.tasksContainer.innerHTML = filteredTasks.map(task => `
       <div class="task-item ${task.done ? 'done' : ''}">
         <input
           type="checkbox"
