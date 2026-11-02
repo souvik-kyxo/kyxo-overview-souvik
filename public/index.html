@@ -7,9 +7,45 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
+  <div id="authContainer" class="auth-container" style="display: none;">
+    <div class="auth-box">
+      <h1>To-Do List</h1>
+      <form id="authForm" class="auth-form">
+        <div class="form-group">
+          <label for="authEmail">Email:</label>
+          <input
+            type="email"
+            id="authEmail"
+            placeholder="you@example.com"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="authPassword">Password:</label>
+          <input
+            type="password"
+            id="authPassword"
+            placeholder="At least 8 characters"
+            required
+          >
+        </div>
+        <div class="auth-buttons">
+          <button type="button" class="btn btn-primary" id="loginBtn">Login</button>
+          <button type="button" class="btn btn-secondary" id="registerBtn">Sign Up</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="appContainer" class="container" style="display: none;">
     <header>
-      <h1>My To-Do List</h1>
+      <div class="header-content">
+        <h1>My To-Do List</h1>
+        <div class="user-info">
+          <span id="userEmail"></span>
+          <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+      </div>
     </header>
 
     <main>
@@ -50,5 +86,6 @@
   </div>
 
   <script src="app.js"></script>
+  <script src="auth.js"></script>
 </body>
 </html>

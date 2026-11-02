@@ -13,5 +13,7 @@ yarn-debug.log*
 *.swp
 *.swo
 tasks.json
+users.json
+tasks_data/
 .cache/
 coverage/

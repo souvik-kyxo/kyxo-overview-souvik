@@ -2,26 +2,57 @@ class TodoApp {
   constructor() {
     this.tasks = [];
     this.searchQuery = '';
+    this.token = localStorage.getItem('authToken');
+    this.userEmail = localStorage.getItem('userEmail');
+
+    this.authContainer = document.getElementById('authContainer');
+    this.appContainer = document.getElementById('appContainer');
     this.taskForm = document.getElementById('taskForm');
     this.taskInput = document.getElementById('taskInput');
     this.dueDateInput = document.getElementById('dueDateInput');
     this.searchInput = document.getElementById('searchInput');
     this.tasksContainer = document.getElementById('tasksContainer');
-    this.emptyState = document.getElementById('emptyState');
+    this.logoutBtn = document.getElementById('logoutBtn');
 
-    this.taskForm.addEventListener('submit', (e) => this.addTask(e));
-    this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
-    this.loadTasks();
+    if (this.token) {
+      this.showApp();
+      this.taskForm.addEventListener('submit', (e) => this.addTask(e));
+      this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+      this.logoutBtn.addEventListener('click', () => this.logout());
+      this.loadTasks();
+    } else {
+      this.showAuth();
+    }
+  }
+
+  showAuth() {
+    this.authContainer.style.display = 'block';
+    if (this.appContainer) this.appContainer.style.display = 'none';
+  }
+
+  showApp() {
+    if (this.authContainer) this.authContainer.style.display = 'none';
+    this.appContainer.style.display = 'block';
+  }
+
+  getHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${this.token}`
+    };
   }
 
   async loadTasks() {
     try {
-      const response = await fetch('/api/tasks');
+      const response = await fetch('/api/tasks', {
+        headers: this.getHeaders()
+      });
       if (!response.ok) throw new Error('Failed to load tasks');
       this.tasks = await response.json();
       this.render();
     } catch (error) {
       console.error('Error loading tasks:', error);
+      alert('Failed to load tasks. Please refresh the page.');
     }
   }
 
@@ -38,7 +69,7 @@ class TodoApp {
     try {
       const response = await fetch('/api/tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getHeaders(),
         body: JSON.stringify({ title, status: 'todo', done: false, dueDate })
       });
 
@@ -62,7 +93,7 @@ class TodoApp {
     try {
       const response = await fetch(`/api/tasks/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getHeaders(),
         body: JSON.stringify(updates)
       });
 
@@ -87,7 +118,7 @@ class TodoApp {
     try {
       const response = await fetch(`/api/tasks/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: this.getHeaders()
       });
 
       if (!response.ok) {
@@ -101,6 +132,64 @@ class TodoApp {
       console.error('Error deleting task:', error);
       alert('Failed to delete task. Please try again.');
     }
+  }
+
+  async register(email, password) {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      this.token = data.token;
+      this.userEmail = data.user.email;
+      localStorage.setItem('authToken', this.token);
+      localStorage.setItem('userEmail', this.userEmail);
+      this.showApp();
+      this.loadTasks();
+    } catch (error) {
+      alert(error.message || 'Registration failed');
+    }
+  }
+
+  async login(email, password) {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      this.token = data.token;
+      this.userEmail = data.user.email;
+      localStorage.setItem('authToken', this.token);
+      localStorage.setItem('userEmail', this.userEmail);
+      this.showApp();
+      this.loadTasks();
+    } catch (error) {
+      alert(error.message || 'Login failed');
+    }
+  }
+
+  logout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userEmail');
+    this.token = null;
+    this.userEmail = null;
+    this.tasks = [];
+    this.showAuth();
+    document.getElementById('authForm').reset();
   }
 
   handleSearch(e) {
