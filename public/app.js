@@ -172,7 +172,8 @@ class TodoApp {
     this.tasksContainer.innerHTML = filteredTasks.map(task => {
       const dueDateStatus = this.getDueDateStatus(task.dueDate);
       const dueDateClass = dueDateStatus ? `due-date ${dueDateStatus}` : 'due-date';
-      const dueDateHTML = task.dueDate ? `<span class="${dueDateClass}">${this.formatDate(task.dueDate)}</span>` : '';
+      const dueDateDisplay = task.dueDate ? `<span class="${dueDateClass}">${this.formatDate(task.dueDate)}</span>` : '<span class="due-date-placeholder">Add due date</span>';
+      const formattedDate = task.dueDate ? task.dueDate : '';
 
       return `
         <div class="task-item ${task.done ? 'done' : ''} ${task.dueDate && dueDateStatus === 'overdue' ? 'overdue' : ''}">
@@ -194,7 +195,13 @@ class TodoApp {
                 <option value="in-progress">In Progress</option>
                 <option value="done">Done</option>
               </select>
-              ${dueDateHTML}
+              <input
+                type="date"
+                class="task-due-date-input"
+                value="${formattedDate}"
+                onchange="app.updateTask('${task.id}', { dueDate: event.target.value || null })"
+                title="Click to set or edit due date"
+              >
             </div>
           </div>
           <div class="task-actions">
