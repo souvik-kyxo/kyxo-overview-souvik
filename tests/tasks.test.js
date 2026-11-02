@@ -75,7 +75,8 @@ describe('Task Model', () => {
         title: 'Buy groceries',
         status: 'in-progress',
         done: true,
-        createdAt: '2025-01-01T00:00:00Z'
+        createdAt: '2025-01-01T00:00:00Z',
+        categories: []
       });
     });
 

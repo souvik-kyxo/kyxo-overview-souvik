@@ -144,4 +144,66 @@ router.delete('/categories/:name', (req, res) => {
   }
 });
 
+router.get('/filter/category/:categoryName', (req, res) => {
+  try {
+    const { categoryName } = req.params;
+    const categoryLower = categoryName.toLowerCase();
+    const filtered = tasks.filter(task =>
+      task.categories && Array.isArray(task.categories) && task.categories.includes(categoryLower)
+    );
+    res.json(filtered);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/by-category', (req, res) => {
+  try {
+    const grouped = {};
+    const uncategorized = [];
+
+    tasks.forEach(task => {
+      if (task.categories && Array.isArray(task.categories) && task.categories.length > 0) {
+        task.categories.forEach(category => {
+          if (!grouped[category]) {
+            grouped[category] = [];
+          }
+          grouped[category].push(task);
+        });
+      } else {
+        uncategorized.push(task);
+      }
+    });
+
+    res.json({
+      grouped: Object.entries(grouped).map(([categoryName, categoryTasks]) => ({
+        category: categoryName,
+        tasks: categoryTasks,
+        count: categoryTasks.length
+      })),
+      uncategorized,
+      total: tasks.length
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/categories/stats', (req, res) => {
+  try {
+    const stats = categories.map(cat => {
+      const taskCount = tasks.filter(t =>
+        t.categories && Array.isArray(t.categories) && t.categories.includes(cat.name)
+      ).length;
+      return {
+        ...cat.toJSON(),
+        taskCount
+      };
+    });
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

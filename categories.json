@@ -5,7 +5,7 @@
     "displayName": "Work",
     "color": "#3b82f6",
     "description": "Work-related tasks",
-    "createdAt": "2026-11-02T15:00:24.396Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631623720",
@@ -13,7 +13,7 @@
     "displayName": "Personal",
     "color": "#8b5cf6",
     "description": "Personal tasks",
-    "createdAt": "2026-11-02T15:00:24.396Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631623720",
@@ -21,7 +21,7 @@
     "displayName": "Shopping",
     "color": "#ec4899",
     "description": "Shopping list items",
-    "createdAt": "2026-11-02T15:00:24.396Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631623720",
@@ -29,7 +29,7 @@
     "displayName": "Health",
     "color": "#10b981",
     "description": "Health and fitness",
-    "createdAt": "2026-11-02T15:00:24.396Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631623720",
@@ -37,7 +37,7 @@
     "displayName": "Urgent",
     "color": "#ef4444",
     "description": "Urgent tasks",
-    "createdAt": "2026-11-02T15:00:24.396Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631623720",
@@ -45,7 +45,7 @@
     "displayName": "Important",
     "color": "#f59e0b",
     "description": "Important tasks",
-    "createdAt": "2026-11-02T15:00:24.396Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631624415",
@@ -53,7 +53,7 @@
     "displayName": "Test Category",
     "color": "#ff5733",
     "description": "A test category",
-    "createdAt": "2026-11-02T15:00:24.415Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631624421",
@@ -61,7 +61,7 @@
     "displayName": "Unique Category",
     "color": "#ff5733",
     "description": "",
-    "createdAt": "2026-11-02T15:00:24.421Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   },
   {
     "id": "1793631624426",
@@ -69,6 +69,6 @@
     "displayName": "Invalid Color",
     "color": "#667eea",
     "description": "",
-    "createdAt": "2026-11-02T15:00:24.426Z"
+    "createdAt": "2026-11-02T15:12:41.131Z"
   }
 ]

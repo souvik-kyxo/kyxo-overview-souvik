@@ -3,8 +3,10 @@ class TodoApp {
     this.tasks = [];
     this.categories = [];
     this.categoryColorMap = {};
+    this.categoryStats = {};
     this.searchQuery = '';
     this.selectedCategories = new Set();
+    this.groupByCategory = false;
     this.taskForm = document.getElementById('taskForm');
     this.taskInput = document.getElementById('taskInput');
     this.dueDateInput = document.getElementById('dueDateInput');
@@ -27,8 +29,23 @@ class TodoApp {
       if (!response.ok) throw new Error('Failed to load categories');
       this.categories = await response.json();
       this.buildCategoryColorMap();
+      this.loadCategoryStats();
     } catch (error) {
       console.error('Error loading categories:', error);
+    }
+  }
+
+  async loadCategoryStats() {
+    try {
+      const response = await fetch('/api/tasks/categories/stats');
+      if (!response.ok) throw new Error('Failed to load category stats');
+      const stats = await response.json();
+      this.categoryStats = {};
+      stats.forEach(stat => {
+        this.categoryStats[stat.name] = stat.taskCount;
+      });
+    } catch (error) {
+      console.error('Error loading category stats:', error);
     }
   }
 
@@ -37,6 +54,15 @@ class TodoApp {
     this.categories.forEach(cat => {
       this.categoryColorMap[cat.name] = cat.color;
     });
+  }
+
+  toggleGroupByCategory() {
+    this.groupByCategory = !this.groupByCategory;
+    const btn = document.querySelector('.btn-view-toggle');
+    if (btn) {
+      btn.classList.toggle('active', this.groupByCategory);
+    }
+    this.render();
   }
 
   toggleCategoryManager() {
@@ -63,13 +89,16 @@ class TodoApp {
     }
 
     content.innerHTML = this.categories.map(cat => {
-      const taskCount = this.getTaskCountByCategory(cat.name);
+      const taskCount = this.categoryStats[cat.name] || 0;
       return `
         <div class="category-item">
           <div class="category-item-info">
             <div class="category-item-color" style="background-color: ${cat.color}"></div>
-            <span class="category-item-name">${this.escapeHtml(cat.name)}</span>
-            <span class="category-item-count">${taskCount} task${taskCount !== 1 ? 's' : ''}</span>
+            <div class="category-item-details">
+              <span class="category-item-name">${this.escapeHtml(cat.displayName)}</span>
+              ${cat.description ? `<span class="category-item-description">${this.escapeHtml(cat.description)}</span>` : ''}
+              <span class="category-item-count">${taskCount} task${taskCount !== 1 ? 's' : ''}</span>
+            </div>
           </div>
           <div class="category-item-actions">
             <button class="btn-delete-category" onclick="app.deleteCategory('${this.escapeHtml(cat.name)}')">Delete</button>
@@ -106,6 +135,7 @@ class TodoApp {
       const newCategory = await response.json();
       this.categories.push(newCategory);
       this.buildCategoryColorMap();
+      this.loadCategoryStats();
       nameInput.value = '';
       colorInput.value = '#667eea';
       this.renderCategoriesManager();
@@ -133,6 +163,7 @@ class TodoApp {
 
       this.categories = this.categories.filter(c => c.name !== categoryName);
       this.buildCategoryColorMap();
+      this.loadCategoryStats();
       this.renderCategoriesManager();
       this.render();
     } catch (error) {
@@ -226,6 +257,7 @@ class TodoApp {
 
       const newTask = await response.json();
       this.tasks.push(newTask);
+      this.loadCategoryStats();
       this.taskInput.value = '';
       this.dueDateInput.value = '';
       this.categoryInput.value = '';
@@ -254,6 +286,7 @@ class TodoApp {
       if (index !== -1) {
         this.tasks[index] = updatedTask;
       }
+      this.loadCategoryStats();
       this.render();
     } catch (error) {
       console.error('Error updating task:', error);
@@ -274,6 +307,7 @@ class TodoApp {
       }
 
       this.tasks = this.tasks.filter(t => t.id !== id);
+      this.loadCategoryStats();
       this.render();
     } catch (error) {
       console.error('Error deleting task:', error);
@@ -405,81 +439,151 @@ class TodoApp {
     this.render();
   }
 
+  renderTaskItem(task) {
+    const dueDateStatus = this.getDueDateStatus(task.dueDate);
+    const dueDateClass = dueDateStatus ? `due-date ${dueDateStatus}` : 'due-date';
+    const formattedDate = task.dueDate ? task.dueDate : '';
+
+    const categoriesHtml = task.categories && Array.isArray(task.categories) && task.categories.length > 0
+      ? `<div class="task-categories">${task.categories.map(cat => {
+        const color = this.getCategoryColor(cat);
+        return `<span class="category-tag" style="background: linear-gradient(135deg, ${color} 0%, ${this.adjustColor(color, -20)} 100%)">${this.escapeHtml(cat)}</span>`;
+      }).join('')}</div>`
+      : '';
+
+    return `
+      <div class="task-item ${task.done ? 'done' : ''} ${task.dueDate && dueDateStatus === 'overdue' ? 'overdue' : ''}">
+        <input
+          type="checkbox"
+          class="task-checkbox"
+          ${task.done ? 'checked' : ''}
+          onchange="app.updateTask('${task.id}', { done: ${!task.done} })"
+        >
+        <div class="task-content">
+          <div class="task-title">${this.escapeHtml(task.title)}</div>
+          ${categoriesHtml}
+          <div class="task-meta">
+            <select
+              class="status-select"
+              value="${task.status}"
+              onchange="app.updateTask('${task.id}', { status: event.target.value })"
+            >
+              <option value="todo">To Do</option>
+              <option value="in-progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+            <input
+              type="date"
+              class="task-due-date-input"
+              value="${formattedDate}"
+              onchange="app.updateTask('${task.id}', { dueDate: event.target.value || null })"
+              title="Click to set or edit due date"
+            >
+            <input
+              type="text"
+              class="task-category-input"
+              placeholder="Add categories (comma-separated)"
+              value="${task.categories && Array.isArray(task.categories) ? task.categories.join(', ') : ''}"
+              onchange="app.updateTask('${task.id}', { categories: event.target.value.split(',').map(c => c.trim().toLowerCase()).filter(c => c) })"
+              title="Click to add or edit categories"
+            >
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="btn-delete" onclick="app.deleteTask('${task.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+  }
+
   render() {
     this.renderCategoryFilters();
     const categoryManager = document.getElementById('categoryManager');
     if (categoryManager && !categoryManager.classList.contains('hidden')) {
       this.renderCategoriesManager();
     }
-    const filteredTasks = this.getFilteredTasks();
 
     if (this.tasks.length === 0) {
       this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks yet. Add one to get started!</p>';
       return;
     }
 
+    if (this.groupByCategory) {
+      this.renderGroupedByCategory();
+    } else {
+      this.renderFlat();
+    }
+  }
+
+  renderFlat() {
+    const filteredTasks = this.getFilteredTasks();
+
     if (filteredTasks.length === 0) {
       this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks match your filters.</p>';
       return;
     }
 
-    this.tasksContainer.innerHTML = filteredTasks.map(task => {
-      const dueDateStatus = this.getDueDateStatus(task.dueDate);
-      const dueDateClass = dueDateStatus ? `due-date ${dueDateStatus}` : 'due-date';
-      const dueDateDisplay = task.dueDate ? `<span class="${dueDateClass}">${this.formatDate(task.dueDate)}</span>` : '<span class="due-date-placeholder">Add due date</span>';
-      const formattedDate = task.dueDate ? task.dueDate : '';
+    this.tasksContainer.innerHTML = filteredTasks.map(task => this.renderTaskItem(task)).join('');
+  }
 
-      const categoriesHtml = task.categories && Array.isArray(task.categories) && task.categories.length > 0
-        ? `<div class="task-categories">${task.categories.map(cat => {
-          const color = this.getCategoryColor(cat);
-          return `<span class="category-tag" style="background: linear-gradient(135deg, ${color} 0%, ${this.adjustColor(color, -20)} 100%)">${this.escapeHtml(cat)}</span>`;
-        }).join('')}</div>`
-        : '';
+  renderGroupedByCategory() {
+    const filtered = this.getFilteredTasks();
+    const grouped = {};
+    let uncategorized = [];
 
-      return `
-        <div class="task-item ${task.done ? 'done' : ''} ${task.dueDate && dueDateStatus === 'overdue' ? 'overdue' : ''}">
-          <input
-            type="checkbox"
-            class="task-checkbox"
-            ${task.done ? 'checked' : ''}
-            onchange="app.updateTask('${task.id}', { done: ${!task.done} })"
-          >
-          <div class="task-content">
-            <div class="task-title">${this.escapeHtml(task.title)}</div>
-            ${categoriesHtml}
-            <div class="task-meta">
-              <select
-                class="status-select"
-                value="${task.status}"
-                onchange="app.updateTask('${task.id}', { status: event.target.value })"
-              >
-                <option value="todo">To Do</option>
-                <option value="in-progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-              <input
-                type="date"
-                class="task-due-date-input"
-                value="${formattedDate}"
-                onchange="app.updateTask('${task.id}', { dueDate: event.target.value || null })"
-                title="Click to set or edit due date"
-              >
-              <input
-                type="text"
-                class="task-category-input"
-                placeholder="Add categories (comma-separated)"
-                value="${task.categories && Array.isArray(task.categories) ? task.categories.join(', ') : ''}"
-                onchange="app.updateTask('${task.id}', { categories: event.target.value.split(',').map(c => c.trim().toLowerCase()).filter(c => c) })"
-                title="Click to add or edit categories"
-              >
-            </div>
+    filtered.forEach(task => {
+      if (task.categories && Array.isArray(task.categories) && task.categories.length > 0) {
+        task.categories.forEach(category => {
+          if (!grouped[category]) {
+            grouped[category] = [];
+          }
+          grouped[category].push(task);
+        });
+      } else {
+        uncategorized.push(task);
+      }
+    });
+
+    if (Object.keys(grouped).length === 0 && uncategorized.length === 0) {
+      this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks match your filters.</p>';
+      return;
+    }
+
+    let html = '';
+
+    Object.entries(grouped).forEach(([categoryName, tasks]) => {
+      const color = this.getCategoryColor(categoryName);
+      const count = tasks.length;
+      html += `
+        <div class="category-group">
+          <div class="category-group-header" style="border-left-color: ${color}">
+            <span class="category-group-color" style="background-color: ${color}"></span>
+            <span class="category-group-name">${this.escapeHtml(categoryName)}</span>
+            <span class="category-group-count">${count}</span>
           </div>
-          <div class="task-actions">
-            <button class="btn-delete" onclick="app.deleteTask('${task.id}')">Delete</button>
+          <div class="category-group-tasks">
+            ${tasks.map(task => this.renderTaskItem(task)).join('')}
           </div>
         </div>
       `;
-    }).join('');
+    });
+
+    if (uncategorized.length > 0) {
+      html += `
+        <div class="category-group">
+          <div class="category-group-header" style="border-left-color: #999">
+            <span class="category-group-color" style="background-color: #999"></span>
+            <span class="category-group-name">Uncategorized</span>
+            <span class="category-group-count">${uncategorized.length}</span>
+          </div>
+          <div class="category-group-tasks">
+            ${uncategorized.map(task => this.renderTaskItem(task)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    this.tasksContainer.innerHTML = html;
   }
 
   escapeHtml(text) {

@@ -27,13 +27,14 @@ describe('Categories API', () => {
 
   describe('POST /api/tasks/categories', () => {
     test('creates a new category', async () => {
+      const timestamp = Date.now();
       const response = await request(app)
         .post('/api/tasks/categories')
-        .send({ name: 'Test Category', color: '#ff5733', description: 'A test category' });
+        .send({ name: `Test Category ${timestamp}`, color: '#ff5733', description: 'A test category' });
 
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
-      expect(response.body.displayName).toBe('Test Category');
+      expect(response.body.displayName).toBe(`Test Category ${timestamp}`);
       expect(response.body.color).toBe('#ff5733');
     });
 
@@ -47,22 +48,25 @@ describe('Categories API', () => {
     });
 
     test('rejects duplicate category', async () => {
+      const timestamp = Date.now();
+      const uniqueName = `Unique Category ${timestamp}`;
       await request(app)
         .post('/api/tasks/categories')
-        .send({ name: 'Unique Category', color: '#ff5733' });
+        .send({ name: uniqueName, color: '#ff5733' });
 
       const duplicateResponse = await request(app)
         .post('/api/tasks/categories')
-        .send({ name: 'Unique Category', color: '#ff5733' });
+        .send({ name: uniqueName, color: '#ff5733' });
 
       expect(duplicateResponse.status).toBe(409);
       expect(duplicateResponse.body).toHaveProperty('error');
     });
 
     test('validates hex color format', async () => {
+      const timestamp = Date.now();
       const response = await request(app)
         .post('/api/tasks/categories')
-        .send({ name: 'Invalid Color', color: 'invalid' });
+        .send({ name: `Invalid Color ${timestamp}`, color: 'invalid' });
 
       expect(response.status).toBe(201);
       expect(response.body.color).toBe('#667eea');
