@@ -11,13 +11,13 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
   try {
-    const { title, status = 'todo', done = false } = req.body;
+    const { title, status = 'todo', done = false, dueDate = null } = req.body;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'Task title is required' });
     }
 
-    const newTask = new Task(title, status, done);
+    const newTask = new Task(title, status, done, null, null, dueDate);
     tasks.push(newTask);
     TaskStorage.saveTasks(tasks);
 
@@ -30,7 +30,7 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { status, done, title } = req.body;
+    const { status, done, title, dueDate } = req.body;
 
     const task = tasks.find(t => t.id === id);
     if (!task) {
@@ -50,6 +50,10 @@ router.put('/:id', (req, res) => {
 
     if (done !== undefined) {
       task.done = done;
+    }
+
+    if (dueDate !== undefined) {
+      task.dueDate = dueDate;
     }
 
     TaskStorage.saveTasks(tasks);
