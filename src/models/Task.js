@@ -1,10 +1,11 @@
 class Task {
-  constructor(title, status = 'todo', done = false, id = null, createdAt = null, dueDate = null) {
+  constructor(title, userId, status = 'todo', done = false, id = null, createdAt = null, dueDate = null) {
     if (!title || title.trim() === '') {
       throw new Error('Task title cannot be empty');
     }
 
     this.id = id || Date.now().toString();
+    this.userId = userId;
     this.title = title.trim();
     this.status = status; // 'todo', 'in-progress', 'done'
     this.done = done;
@@ -31,6 +32,7 @@ class Task {
   toJSON() {
     const json = {
       id: this.id,
+      userId: this.userId,
       title: this.title,
       status: this.status,
       done: this.done,
@@ -43,7 +45,7 @@ class Task {
   }
 
   static fromJSON(data) {
-    return new Task(data.title, data.status, data.done, data.id, data.createdAt, data.dueDate);
+    return new Task(data.title, data.userId, data.status, data.done, data.id, data.createdAt, data.dueDate);
   }
 }
 

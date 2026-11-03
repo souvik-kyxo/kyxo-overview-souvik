@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const tasksRouter = require('./src/routes/tasks');
+const authRouter = require('./src/routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
+app.use('/api/auth', authRouter);
 app.use('/api/tasks', tasksRouter);
 
 app.get('/', (req, res) => {
