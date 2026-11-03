@@ -1,7 +1,7 @@
 const User = require('../src/models/User');
 const bcrypt = require('bcryptjs');
 
-const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testpass';
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testPassword123';
 
 describe('User Model', () => {
   describe('User Creation', () => {

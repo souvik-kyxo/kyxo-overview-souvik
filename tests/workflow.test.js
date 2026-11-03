@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRouter);
 app.use('/api/tasks', tasksRouter);
 
-const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testpass';
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testPassword123';
 
 describe('End-to-End Workflow', () => {
   describe('Complete User Journey', () => {
@@ -216,6 +216,83 @@ describe('End-to-End Workflow', () => {
         expect(updateResponse.status).toBe(200);
         expect(updateResponse.body.priority).toBe(newPriority);
       }
+    });
+
+    test('[REQ-10002:AC1] can update task status and display multiple stage statuses', async () => {
+      // Register user
+      const registerResponse = await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'statususer',
+          email: 'status@example.com',
+          password: TEST_PASSWORD
+        });
+
+      const { accessToken } = registerResponse.body;
+
+      // Create a task with default status
+      const createTaskResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Task with status' });
+
+      expect(createTaskResponse.status).toBe(201);
+      const task = createTaskResponse.body;
+      expect(task.status).toBe('todo');
+
+      // Test updating task to in-progress status
+      const updateInProgressResponse = await request(app)
+        .put(`/api/tasks/${task.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'in-progress' });
+
+      expect(updateInProgressResponse.status).toBe(200);
+      expect(updateInProgressResponse.body.status).toBe('in-progress');
+
+      // Test updating task to done status
+      const updateDoneResponse = await request(app)
+        .put(`/api/tasks/${task.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'done' });
+
+      expect(updateDoneResponse.status).toBe(200);
+      expect(updateDoneResponse.body.status).toBe('done');
+
+      // Verify status is displayed when fetching tasks
+      const tasksResponse = await request(app)
+        .get('/api/tasks')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(tasksResponse.status).toBe(200);
+      const fetchedTask = tasksResponse.body.find(t => t.id === task.id);
+      expect(fetchedTask.status).toBe('done');
+
+      // Create multiple tasks with different statuses to verify system supports multiple stages
+      const task2CreateResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Task 2', status: 'in-progress' });
+
+      const task2 = task2CreateResponse.body;
+      expect(task2.status).toBe('in-progress');
+
+      const task3CreateResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Task 3', status: 'todo' });
+
+      const task3 = task3CreateResponse.body;
+      expect(task3.status).toBe('todo');
+
+      // Verify multiple stages are supported in the system
+      const allTasksResponse = await request(app)
+        .get('/api/tasks')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      const statuses = allTasksResponse.body.map(t => t.status);
+      expect(statuses).toContain('todo');
+      expect(statuses).toContain('in-progress');
+      expect(statuses).toContain('done');
     });
   });
 
