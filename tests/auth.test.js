@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRouter);
 app.use('/api/tasks', tasksRouter);
 
-const TEST_PASSWORD = process.env.TEST_PASSWORD || 'TestPass123456';
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testpass';
 
 describe('Authentication & Authorization', () => {
   const testUser = {

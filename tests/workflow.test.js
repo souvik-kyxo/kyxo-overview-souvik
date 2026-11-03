@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRouter);
 app.use('/api/tasks', tasksRouter);
 
-const TEST_PASSWORD = process.env.TEST_PASSWORD || 'TestPass123456';
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testpass';
 
 describe('End-to-End Workflow', () => {
   describe('Complete User Journey', () => {
@@ -17,7 +17,7 @@ describe('End-to-End Workflow', () => {
       const userCreds = {
         username: 'fullworkflowuser',
         email: 'workflow@example.com',
-        password: 'TEST_PASSWORD'
+        password: TEST_PASSWORD
       };
 
       // Step 1: Register user
@@ -118,7 +118,7 @@ describe('End-to-End Workflow', () => {
         .send({
           username: 'tokenworkflowuser',
           email: 'tokenworkflow@example.com',
-          password: 'TokenTEST_PASSWORD'
+          password: TEST_PASSWORD
         });
 
       const { refreshToken: originalRefreshToken } = registerResponse.body;
@@ -128,7 +128,7 @@ describe('End-to-End Workflow', () => {
         .post('/api/auth/login')
         .send({
           username: 'tokenworkflowuser',
-          password: 'TokenTEST_PASSWORD'
+          password: TEST_PASSWORD
         });
 
       expect(loginResponse.status).toBe(200);
@@ -168,7 +168,7 @@ describe('End-to-End Workflow', () => {
         .send({
           username: 'multitaskuser',
           email: 'multitask@example.com',
-          password: 'TEST_PASSWORD'
+          password: TEST_PASSWORD
         });
 
       const { accessToken } = registerResponse.body;
@@ -226,7 +226,7 @@ describe('End-to-End Workflow', () => {
         .send({
           username: 'erroruser',
           email: 'error@example.com',
-          password: 'TEST_PASSWORD'
+          password: TEST_PASSWORD
         });
 
       const { accessToken } = registerResponse.body;
@@ -247,7 +247,7 @@ describe('End-to-End Workflow', () => {
         .send({
           username: 'concurrentuser',
           email: 'concurrent@example.com',
-          password: 'TEST_PASSWORD'
+          password: TEST_PASSWORD
         });
 
       const { accessToken } = registerResponse.body;
