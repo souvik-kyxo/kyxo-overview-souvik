@@ -364,4 +364,194 @@ describe('Tasks API', () => {
       expect(finalResponse.body.done).toBe(true);
     });
   });
+
+  describe('Priority Feature', () => {
+    test('[REQ-10001:AC1] creates a task with priority level', async () => {
+      const response = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'High priority task', priority: 'high' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.priority).toBe('high');
+    });
+
+    test('creates a task with default priority if not specified', async () => {
+      const response = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Default priority task' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.priority).toBe('medium');
+    });
+
+    test('updates task priority', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task to update priority', priority: 'low' });
+
+      const taskId = createResponse.body.id;
+
+      const updateResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ priority: 'high' });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.priority).toBe('high');
+    });
+
+    test('supports all priority levels', async () => {
+      const priorities = ['low', 'medium', 'high'];
+
+      for (const priority of priorities) {
+        const response = await request(app)
+          .post('/api/tasks')
+          .set('Authorization', `Bearer ${testToken}`)
+          .send({ title: `Task with ${priority} priority`, priority });
+
+        expect(response.status).toBe(201);
+        expect(response.body.priority).toBe(priority);
+      }
+    });
+  });
+
+  describe('Description and Tags Feature', () => {
+    test('creates a task with description', async () => {
+      const description = 'This is a detailed task description';
+      const response = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task with description', description });
+
+      expect(response.status).toBe(201);
+      expect(response.body.description).toBe(description);
+    });
+
+    test('creates a task with tags', async () => {
+      const tags = ['work', 'urgent', 'client'];
+      const response = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task with tags', tags });
+
+      expect(response.status).toBe(201);
+      expect(response.body.tags).toEqual(tags);
+    });
+
+    test('updates task description', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task to update description', description: 'Original' });
+
+      const taskId = createResponse.body.id;
+      const newDescription = 'Updated description';
+
+      const updateResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ description: newDescription });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.description).toBe(newDescription);
+    });
+
+    test('updates task tags', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task with tags', tags: ['old'] });
+
+      const taskId = createResponse.body.id;
+      const newTags = ['new', 'tags', 'added'];
+
+      const updateResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ tags: newTags });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.tags).toEqual(newTags);
+    });
+  });
+
+  describe('Timestamps Feature', () => {
+    test('task has createdAt and updatedAt timestamps', async () => {
+      const response = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task with timestamps' });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('createdAt');
+      expect(response.body).toHaveProperty('updatedAt');
+      expect(new Date(response.body.createdAt)).toBeInstanceOf(Date);
+    });
+
+    test('[REQ-10003:AC1] task gets completedAt when marked done', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task to complete' });
+
+      const taskId = createResponse.body.id;
+
+      const updateResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ done: true });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body).toHaveProperty('completedAt');
+      expect(new Date(updateResponse.body.completedAt)).toBeInstanceOf(Date);
+    });
+
+    test('completedAt is cleared when task is marked not done', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task to uncomplete' });
+
+      const taskId = createResponse.body.id;
+
+      // Mark as done
+      await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ done: true });
+
+      // Mark as not done
+      const unmarkResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ done: false });
+
+      expect(unmarkResponse.status).toBe(200);
+      expect(unmarkResponse.body.completedAt).toBeUndefined();
+    });
+
+    test('updatedAt is updated when task is modified', async () => {
+      const createResponse = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task to modify' });
+
+      const taskId = createResponse.body.id;
+      const originalUpdatedAt = createResponse.body.updatedAt;
+
+      // Small delay to ensure timestamp difference
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const updateResponse = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ title: 'Task modified' });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.updatedAt).not.toBe(originalUpdatedAt);
+    });
+  });
 });

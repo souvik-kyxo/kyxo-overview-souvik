@@ -2,6 +2,9 @@ class TodoApp {
   constructor() {
     this.tasks = [];
     this.searchQuery = '';
+    this.priorityFilter = '';
+    this.statusFilter = '';
+    this.sortBy = 'createdAt';
     this.accessToken = localStorage.getItem('accessToken');
     this.refreshToken = localStorage.getItem('refreshToken');
     this.user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
@@ -25,6 +28,9 @@ class TodoApp {
     this.taskInput = document.getElementById('taskInput');
     this.dueDateInput = document.getElementById('dueDateInput');
     this.searchInput = document.getElementById('searchInput');
+    this.priorityFilterElement = document.getElementById('priorityFilter');
+    this.statusFilterElement = document.getElementById('statusFilter');
+    this.sortSelectElement = document.getElementById('sortSelect');
     this.tasksContainer = document.getElementById('tasksContainer');
     this.emptyState = document.getElementById('emptyState');
   }
@@ -34,6 +40,9 @@ class TodoApp {
     this.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
     this.taskForm.addEventListener('submit', (e) => this.addTask(e));
     this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+    this.priorityFilterElement.addEventListener('change', (e) => this.handlePriorityFilter(e));
+    this.statusFilterElement.addEventListener('change', (e) => this.handleStatusFilter(e));
+    this.sortSelectElement.addEventListener('change', (e) => this.handleSort(e));
   }
 
   checkAuthStatus() {
@@ -161,6 +170,7 @@ class TodoApp {
       if (!response.ok) throw new Error('Failed to load tasks');
       this.tasks = await response.json();
       this.render();
+      this.updateStats();
     } catch (error) {
       console.error('Error loading tasks:', error);
     }
@@ -196,6 +206,7 @@ class TodoApp {
       this.taskInput.value = '';
       this.dueDateInput.value = '';
       this.render();
+      this.updateStats();
     } catch (error) {
       console.error('Error adding task:', error);
       alert('Failed to add task. Please try again.');
@@ -224,9 +235,20 @@ class TodoApp {
         this.tasks[index] = updatedTask;
       }
       this.render();
+      this.updateStats();
     } catch (error) {
       console.error('Error updating task:', error);
       alert('Failed to update task. Please try again.');
+    }
+  }
+
+  deleteTaskWithConfirmation(id) {
+    const task = this.tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const confirmed = confirm(`Are you sure you want to delete "${task.title}"?`);
+    if (confirmed) {
+      this.deleteTask(id);
     }
   }
 
@@ -247,6 +269,7 @@ class TodoApp {
 
       this.tasks = this.tasks.filter(t => t.id !== id);
       this.render();
+      this.updateStats();
     } catch (error) {
       console.error('Error deleting task:', error);
       alert('Failed to delete task. Please try again.');
@@ -258,6 +281,70 @@ class TodoApp {
     this.render();
   }
 
+  handlePriorityFilter(e) {
+    this.priorityFilter = e.target.value;
+    this.render();
+  }
+
+  handleStatusFilter(e) {
+    this.statusFilter = e.target.value;
+    this.render();
+  }
+
+  handleSort(e) {
+    this.sortBy = e.target.value;
+    this.render();
+  }
+
+  getFilteredAndSortedTasks() {
+    let filtered = this.tasks;
+
+    if (this.searchQuery.trim()) {
+      filtered = filtered.filter(task =>
+        task.title.toLowerCase().includes(this.searchQuery) ||
+        (task.description && task.description.toLowerCase().includes(this.searchQuery))
+      );
+    }
+
+    if (this.priorityFilter) {
+      filtered = filtered.filter(task => task.priority === this.priorityFilter);
+    }
+
+    if (this.statusFilter) {
+      filtered = filtered.filter(task => task.status === this.statusFilter);
+    }
+
+    return this.sortTasks(filtered);
+  }
+
+  sortTasks(tasks) {
+    const sorted = [...tasks];
+
+    switch (this.sortBy) {
+      case 'priority':
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        sorted.sort((a, b) => (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1));
+        break;
+      case 'dueDate':
+        sorted.sort((a, b) => {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        });
+        break;
+      case 'title':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'createdAt':
+      default:
+        sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        break;
+    }
+
+    return sorted;
+  }
+
   getFilteredTasks() {
     if (!this.searchQuery.trim()) {
       return this.tasks;
@@ -265,6 +352,35 @@ class TodoApp {
     return this.tasks.filter(task =>
       task.title.toLowerCase().includes(this.searchQuery)
     );
+  }
+
+  calculateStats() {
+    const totalTasks = this.tasks.length;
+    const completedTasks = this.tasks.filter(t => t.done).length;
+    const inProgressTasks = this.tasks.filter(t => t.status === 'in-progress').length;
+    const overdueTasks = this.tasks.filter(t => {
+      if (!t.dueDate || t.done) return false;
+      const dueDate = new Date(t.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return dueDate < today;
+    }).length;
+
+    return {
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      overdueTasks
+    };
+  }
+
+  updateStats() {
+    const stats = this.calculateStats();
+    document.getElementById('totalTasks').textContent = stats.totalTasks;
+    document.getElementById('completedTasks').textContent = stats.completedTasks;
+    document.getElementById('inProgressTasks').textContent = stats.inProgressTasks;
+    document.getElementById('overdueTasks').textContent = stats.overdueTasks;
   }
 
   getDueDateStatus(dueDate) {
@@ -307,7 +423,7 @@ class TodoApp {
   }
 
   render() {
-    const filteredTasks = this.getFilteredTasks();
+    const filteredTasks = this.getFilteredAndSortedTasks();
 
     if (this.tasks.length === 0) {
       this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks yet. Add one to get started!</p>';
@@ -315,7 +431,7 @@ class TodoApp {
     }
 
     if (filteredTasks.length === 0) {
-      this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks match your search.</p>';
+      this.tasksContainer.innerHTML = '<p id="emptyState" class="empty-state">No tasks match your filters.</p>';
       return;
     }
 
@@ -324,9 +440,13 @@ class TodoApp {
       const dueDateClass = dueDateStatus ? `due-date ${dueDateStatus}` : 'due-date';
       const dueDateDisplay = task.dueDate ? `<span class="${dueDateClass}">${this.formatDate(task.dueDate)}</span>` : '<span class="due-date-placeholder">Add due date</span>';
       const formattedDate = task.dueDate ? task.dueDate : '';
+      const priorityClass = `priority-${task.priority || 'medium'}`;
+      const priorityBadge = `<span class="priority-badge ${task.priority || 'medium'}">${(task.priority || 'medium').toUpperCase()}</span>`;
+      const descriptionHtml = task.description ? `<div class="task-description">${this.escapeHtml(task.description)}</div>` : '';
+      const tagsHtml = task.tags && task.tags.length > 0 ? `<div class="task-tags">${task.tags.map(tag => `<span class="task-tag">${this.escapeHtml(tag)}</span>`).join('')}</div>` : '';
 
       return `
-        <div class="task-item ${task.done ? 'done' : ''} ${task.dueDate && dueDateStatus === 'overdue' ? 'overdue' : ''}">
+        <div class="task-item ${task.done ? 'done' : ''} ${priorityClass} ${task.dueDate && dueDateStatus === 'overdue' ? 'overdue' : ''}">
           <input
             type="checkbox"
             class="task-checkbox"
@@ -335,7 +455,10 @@ class TodoApp {
           >
           <div class="task-content">
             <div class="task-title">${this.escapeHtml(task.title)}</div>
+            ${descriptionHtml}
+            ${tagsHtml}
             <div class="task-meta">
+              ${priorityBadge}
               <select
                 class="status-select"
                 value="${task.status}"
@@ -352,10 +475,11 @@ class TodoApp {
                 onchange="app.updateTask('${task.id}', { dueDate: event.target.value || null })"
                 title="Click to set or edit due date"
               >
+              ${dueDateDisplay}
             </div>
           </div>
           <div class="task-actions">
-            <button class="btn-delete" onclick="app.deleteTask('${task.id}')">Delete</button>
+            <button class="btn-delete" onclick="app.deleteTaskWithConfirmation('${task.id}')">Delete</button>
           </div>
         </div>
       `;
