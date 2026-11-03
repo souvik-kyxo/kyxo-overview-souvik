@@ -77,13 +77,52 @@
         </form>
       </section>
 
+      <section class="stats-section">
+        <div class="stat-card">
+          <div class="stat-value" id="totalTasks">0</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="completedTasks">0</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="overdueTasks">0</div>
+          <div class="stat-label">Overdue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="inProgressTasks">0</div>
+          <div class="stat-label">In Progress</div>
+        </div>
+      </section>
+
       <section class="filter-section">
-        <input
-          type="text"
-          id="searchInput"
-          placeholder="Search tasks..."
-          class="search-input"
-        >
+        <div class="filter-controls">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search tasks..."
+            class="search-input"
+          >
+          <select id="priorityFilter" class="filter-select">
+            <option value="">All Priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select id="statusFilter" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="todo">To Do</option>
+            <option value="in-progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+          <select id="sortSelect" class="filter-select">
+            <option value="createdAt">Created Date</option>
+            <option value="priority">Priority</option>
+            <option value="dueDate">Due Date</option>
+            <option value="title">Title (A-Z)</option>
+          </select>
+        </div>
       </section>
 
       <section class="tasks-section">

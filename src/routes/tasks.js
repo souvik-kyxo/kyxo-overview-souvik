@@ -15,13 +15,32 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
   try {
-    const { title, status = 'todo', done = false, dueDate = null } = req.body;
+    const {
+      title,
+      status = 'todo',
+      done = false,
+      dueDate = null,
+      priority = 'medium',
+      description = '',
+      tags = []
+    } = req.body;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'Task title is required' });
     }
 
-    const newTask = new Task(title, req.user.userId, status, done, null, null, dueDate);
+    const newTask = new Task(
+      title,
+      req.user.userId,
+      status,
+      done,
+      null,
+      null,
+      dueDate,
+      priority,
+      description,
+      tags
+    );
     tasks.push(newTask);
     TaskStorage.saveTasks(tasks);
 
@@ -34,7 +53,7 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { status, done, title, dueDate } = req.body;
+    const { status, done, title, dueDate, priority, description, tags } = req.body;
 
     const task = tasks.find(t => t.id === id && t.userId === req.user.userId);
     if (!task) {
@@ -46,6 +65,7 @@ router.put('/:id', (req, res) => {
         return res.status(400).json({ error: 'Task title cannot be empty' });
       }
       task.title = title.trim();
+      task.updatedAt = new Date().toISOString();
     }
 
     if (status !== undefined) {
@@ -53,11 +73,30 @@ router.put('/:id', (req, res) => {
     }
 
     if (done !== undefined) {
-      task.done = done;
+      if (done) {
+        task.markAsDone();
+      } else {
+        task.markAsNotDone();
+      }
     }
 
     if (dueDate !== undefined) {
       task.dueDate = dueDate;
+      task.updatedAt = new Date().toISOString();
+    }
+
+    if (priority !== undefined) {
+      task.updatePriority(priority);
+    }
+
+    if (description !== undefined) {
+      task.description = description;
+      task.updatedAt = new Date().toISOString();
+    }
+
+    if (tags !== undefined) {
+      task.tags = tags;
+      task.updatedAt = new Date().toISOString();
     }
 
     TaskStorage.saveTasks(tasks);
