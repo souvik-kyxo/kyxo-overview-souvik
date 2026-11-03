@@ -2,21 +2,162 @@ class TodoApp {
   constructor() {
     this.tasks = [];
     this.searchQuery = '';
+    this.accessToken = localStorage.getItem('accessToken');
+    this.refreshToken = localStorage.getItem('refreshToken');
+    this.user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+
+    this.initializeElements();
+    this.initializeEventListeners();
+    this.checkAuthStatus();
+  }
+
+  initializeElements() {
+    this.authSection = document.getElementById('authSection');
+    this.appSection = document.getElementById('appSection');
+    this.loginForm = document.getElementById('loginForm');
+    this.registerForm = document.getElementById('registerForm');
+    this.loginTab = document.getElementById('loginTab');
+    this.registerTab = document.getElementById('registerTab');
+    this.loginError = document.getElementById('loginError');
+    this.registerError = document.getElementById('registerError');
+
     this.taskForm = document.getElementById('taskForm');
     this.taskInput = document.getElementById('taskInput');
     this.dueDateInput = document.getElementById('dueDateInput');
     this.searchInput = document.getElementById('searchInput');
     this.tasksContainer = document.getElementById('tasksContainer');
     this.emptyState = document.getElementById('emptyState');
+  }
 
+  initializeEventListeners() {
+    this.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+    this.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
     this.taskForm.addEventListener('submit', (e) => this.addTask(e));
     this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
-    this.loadTasks();
+  }
+
+  checkAuthStatus() {
+    if (this.accessToken && this.user) {
+      this.showAppSection();
+      this.loadTasks();
+    } else {
+      this.showAuthSection();
+    }
+  }
+
+  showAuthSection() {
+    this.authSection.style.display = 'flex';
+    this.appSection.style.display = 'none';
+  }
+
+  showAppSection() {
+    this.authSection.style.display = 'none';
+    this.appSection.style.display = 'block';
+  }
+
+  switchToLogin() {
+    this.loginTab.style.display = 'block';
+    this.registerTab.style.display = 'none';
+    this.loginError.textContent = '';
+  }
+
+  switchToRegister() {
+    this.loginTab.style.display = 'none';
+    this.registerTab.style.display = 'block';
+    this.registerError.textContent = '';
+  }
+
+  async handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        this.loginError.textContent = error.error || 'Login failed';
+        return;
+      }
+
+      const data = await response.json();
+      this.accessToken = data.accessToken;
+      this.refreshToken = data.refreshToken;
+      this.user = data.user;
+
+      localStorage.setItem('accessToken', this.accessToken);
+      localStorage.setItem('refreshToken', this.refreshToken);
+      localStorage.setItem('user', JSON.stringify(this.user));
+
+      this.loginForm.reset();
+      this.showAppSection();
+      this.loadTasks();
+    } catch (error) {
+      this.loginError.textContent = 'Network error. Please try again.';
+      console.error('Login error:', error);
+    }
+  }
+
+  async handleRegister(e) {
+    e.preventDefault();
+    const username = document.getElementById('registerUsername').value;
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        this.registerError.textContent = error.error || 'Registration failed';
+        return;
+      }
+
+      const data = await response.json();
+      this.accessToken = data.accessToken;
+      this.refreshToken = data.refreshToken;
+      this.user = data.user;
+
+      localStorage.setItem('accessToken', this.accessToken);
+      localStorage.setItem('refreshToken', this.refreshToken);
+      localStorage.setItem('user', JSON.stringify(this.user));
+
+      this.registerForm.reset();
+      this.showAppSection();
+      this.loadTasks();
+    } catch (error) {
+      this.registerError.textContent = 'Network error. Please try again.';
+      console.error('Register error:', error);
+    }
+  }
+
+  logout() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    this.accessToken = null;
+    this.refreshToken = null;
+    this.user = null;
+    this.tasks = [];
+    this.showAuthSection();
+    this.loginForm.reset();
+    this.switchToLogin();
   }
 
   async loadTasks() {
     try {
-      const response = await fetch('/api/tasks');
+      const response = await fetch('/api/tasks', {
+        headers: { 'Authorization': `Bearer ${this.accessToken}` }
+      });
       if (!response.ok) throw new Error('Failed to load tasks');
       this.tasks = await response.json();
       this.render();
@@ -38,7 +179,10 @@ class TodoApp {
     try {
       const response = await fetch('/api/tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.accessToken}`
+        },
         body: JSON.stringify({ title, status: 'todo', done: false, dueDate })
       });
 
@@ -62,7 +206,10 @@ class TodoApp {
     try {
       const response = await fetch(`/api/tasks/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.accessToken}`
+        },
         body: JSON.stringify(updates)
       });
 
@@ -87,7 +234,10 @@ class TodoApp {
     try {
       const response = await fetch(`/api/tasks/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.accessToken}`
+        }
       });
 
       if (!response.ok) {

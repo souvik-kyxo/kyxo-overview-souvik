@@ -2,11 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
 const TaskStorage = require('../utils/storage');
+const { authenticateToken } = require('../middleware/auth');
 
 let tasks = TaskStorage.loadTasks();
 
+router.use(authenticateToken);
+
 router.get('/', (req, res) => {
-  res.json(tasks);
+  const userTasks = tasks.filter(t => t.userId === req.user.userId);
+  res.json(userTasks);
 });
 
 router.post('/', (req, res) => {
@@ -17,7 +21,7 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Task title is required' });
     }
 
-    const newTask = new Task(title, status, done, null, null, dueDate);
+    const newTask = new Task(title, req.user.userId, status, done, null, null, dueDate);
     tasks.push(newTask);
     TaskStorage.saveTasks(tasks);
 
@@ -32,7 +36,7 @@ router.put('/:id', (req, res) => {
     const { id } = req.params;
     const { status, done, title, dueDate } = req.body;
 
-    const task = tasks.find(t => t.id === id);
+    const task = tasks.find(t => t.id === id && t.userId === req.user.userId);
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
@@ -66,7 +70,7 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const index = tasks.findIndex(t => t.id === id);
+    const index = tasks.findIndex(t => t.id === id && t.userId === req.user.userId);
 
     if (index === -1) {
       return res.status(404).json({ error: 'Task not found' });
