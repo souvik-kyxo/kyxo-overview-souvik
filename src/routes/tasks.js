@@ -3,10 +3,12 @@ const router = express.Router();
 const Task = require('../models/Task');
 const TaskStorage = require('../utils/storage');
 const { authenticateToken } = require('../middleware/auth');
+const { apiLimiter } = require('../middleware/rateLimit');
 
 let tasks = TaskStorage.loadTasks();
 
 router.use(authenticateToken);
+router.use(apiLimiter);
 
 router.get('/', (req, res) => {
   const userTasks = tasks.filter(t => t.userId === req.user.userId);
