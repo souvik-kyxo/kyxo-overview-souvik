@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRouter);
 app.use('/api/tasks', tasksRouter);
 
-const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testpass';
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'testPassword123';
 
 describe('Authentication & Authorization', () => {
   const testUser = {
@@ -198,7 +198,7 @@ describe('Authentication & Authorization', () => {
       expect(response.body.error).toContain('required');
     });
 
-    test('[REQ-10002:AC1] rejects task request with invalid token', async () => {
+    test('rejects task request with invalid token', async () => {
       const response = await request(app)
         .get('/api/tasks')
         .set('Authorization', 'Bearer invalid.token.here');
