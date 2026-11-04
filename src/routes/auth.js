@@ -3,10 +3,11 @@ const router = express.Router();
 const User = require('../models/User');
 const UserStorage = require('../utils/userStorage');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimit');
 
 let users = UserStorage.loadUsers();
 
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -47,7 +48,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -78,7 +79,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/refresh', (req, res) => {
+router.post('/refresh', authLimiter, (req, res) => {
   try {
     const { refreshToken } = req.body;
 

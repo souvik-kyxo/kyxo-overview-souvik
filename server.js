@@ -3,10 +3,14 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const tasksRouter = require('./src/routes/tasks');
 const authRouter = require('./src/routes/auth');
+const { globalLimiter } = require('./src/middleware/rateLimit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
+
+app.use(globalLimiter);
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
